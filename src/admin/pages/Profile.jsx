@@ -8,15 +8,21 @@ export default function Profile() {
   const { profile, updateProfile } = useAdminProfile();
   const [form, setForm] = useState({ name: profile.name, email: profile.email, avatarDataUrl: profile.avatarDataUrl });
   const [savedProfile, setSavedProfile] = useState(false);
+  const [profileError, setProfileError] = useState("");
 
   const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
   const [pwError, setPwError] = useState("");
   const [pwSuccess, setPwSuccess] = useState(false);
 
-  const saveProfile = () => {
-    updateProfile(form);
-    setSavedProfile(true);
-    setTimeout(() => setSavedProfile(false), 1800);
+  const saveProfile = async () => {
+    setProfileError("");
+    try {
+      await updateProfile(form);
+      setSavedProfile(true);
+      setTimeout(() => setSavedProfile(false), 1800);
+    } catch (error) {
+      setProfileError(error.message || "Profile could not be saved.");
+    }
   };
 
   const submitPasswordChange = async (e) => {
@@ -53,6 +59,7 @@ export default function Profile() {
         <Field label="Email">
           <TextInput type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
         </Field>
+        {profileError && <p className="text-rose-300 text-sm font-body" role="alert">{profileError}</p>}
         <button onClick={saveProfile} className="w-full py-2.5 rounded-full bg-moss-500 text-ink-950 font-body font-semibold hover:bg-moss-400 transition-colors">
           {savedProfile ? <><Check size={15} className="inline mr-1.5" /> Saved</> : "Save Profile"}
         </button>

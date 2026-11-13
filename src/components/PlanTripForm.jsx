@@ -13,19 +13,29 @@ const emptyForm = { name: "", email: "", phone: "", destination: "", travelDate:
 export default function PlanTripForm({ itinerarySummary = "", defaultDestination = "" }) {
   const [form, setForm] = useState({ ...emptyForm, destination: defaultDestination });
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const today = new Date().toISOString().slice(0, 10);
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-    addInquiry({
-      ...form,
-      source: INQUIRY_SOURCES.planTrip,
-      inquiryType: "Trip Planning",
-      itinerary: itinerarySummary || undefined,
-    });
-    setSent(true);
-    setForm({ ...emptyForm, destination: defaultDestination });
+    setError("");
+    setSending(true);
+    try {
+      await addInquiry({
+        ...form,
+        source: INQUIRY_SOURCES.planTrip,
+        inquiryType: "Trip Planning",
+        itinerary: itinerarySummary || undefined,
+      });
+      setSent(true);
+      setForm({ ...emptyForm, destination: defaultDestination });
+    } catch (submitError) {
+      setError(submitError.message || "Your request could not be sent. Please try again.");
+    } finally {
+      setSending(false);
+    }
   };
 
   if (sent) {
@@ -35,7 +45,7 @@ export default function PlanTripForm({ itinerarySummary = "", defaultDestination
           <Check size={22} />
         </span>
         <p className="font-display text-2xl text-mist-100 mb-2">Request sent</p>
-        <p className="text-mist-300 font-body text-sm mb-6">We'll get back to you about your trip soon.</p>
+        <p className="text-mist-300 font-body text-sm mb-6">Your request is now available to our trip-planning team.</p>
         <button onClick={() => setSent(false)} className="text-moss-400 hover:text-moss-300 text-sm font-body font-semibold">
           Send another request
         </button>
@@ -77,11 +87,13 @@ export default function PlanTripForm({ itinerarySummary = "", defaultDestination
         onChange={(e) => set({ message: e.target.value })}
         placeholder="Anything we should know — pace, interests, budget, who's travelling."
       />
+      {error && <p className="text-rose-300 text-sm font-body" role="alert">{error}</p>}
       <button
         type="submit"
+        disabled={sending}
         className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-moss-500 px-7 py-3 font-body font-semibold text-ink-950 hover:bg-moss-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-moss-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-850"
       >
-        <Send size={15} aria-hidden="true" /> Send trip request
+        <Send size={15} aria-hidden="true" /> {sending ? "Sending…" : "Send trip request"}
       </button>
     </form>
   );

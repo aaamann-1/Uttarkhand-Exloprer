@@ -11,13 +11,23 @@ export default function Contact() {
   const { settings } = useSiteSettings();
   const [form, setForm] = useState(emptyForm);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-    addInquiry({ ...form, source: INQUIRY_SOURCES.contact, inquiryType: "General Inquiry" });
-    setSent(true);
-    setForm(emptyForm);
+    setError("");
+    setSending(true);
+    try {
+      await addInquiry({ ...form, source: INQUIRY_SOURCES.contact, inquiryType: "General Inquiry" });
+      setSent(true);
+      setForm(emptyForm);
+    } catch (submitError) {
+      setError(submitError.message || "Your message could not be sent. Please try again.");
+    } finally {
+      setSending(false);
+    }
   };
 
   const activePhones = settings.contact.phones.filter((p) => p.enabled && p.number);
@@ -27,7 +37,7 @@ export default function Contact() {
       <PageIntro
         kicker="Contact"
         title="Ask us anything"
-        description="Questions about a destination, a package or your dates — send a message and we'll reply by email or phone."
+        description="Questions about a destination, a package or your dates — send a message and our team will review it."
       />
 
       <div className="grid lg:grid-cols-[1fr_340px] gap-8 lg:gap-10 items-start">
@@ -50,11 +60,13 @@ export default function Contact() {
             </div>
             <InputField label="Phone" type="tel" value={form.phone} onChange={(e) => set({ phone: e.target.value })} autoComplete="tel" placeholder="+91" />
             <TextAreaField label="Message" required rows={6} value={form.message} onChange={(e) => set({ message: e.target.value })} />
+            {error && <p className="text-rose-300 text-sm font-body" role="alert">{error}</p>}
             <button
               type="submit"
+              disabled={sending}
               className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-moss-500 px-7 py-3 font-body font-semibold text-ink-950 hover:bg-moss-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-moss-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-850"
             >
-              <Send size={15} aria-hidden="true" /> Send message
+              <Send size={15} aria-hidden="true" /> {sending ? "Sending…" : "Send message"}
             </button>
           </form>
         )}

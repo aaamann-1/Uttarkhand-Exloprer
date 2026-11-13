@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Mountain, Lock, Mail, AlertCircle } from "lucide-react";
-import { login, useAdminSession, DEMO_CREDENTIALS } from "../../services/adminAuth";
+import { login, useAdminSession } from "../../services/adminAuth";
 import { useSiteSettings } from "../../services/siteSettings";
+import { isSupabaseConfigured } from "../../services/supabase";
 
 export default function Login() {
-  const { loggedIn } = useAdminSession();
+  const { loggedIn, loading: checkingSession } = useAdminSession();
   const { settings } = useSiteSettings();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -13,18 +14,24 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  if (checkingSession) return <div className="min-h-screen bg-ink-950 flex items-center justify-center text-mist-400 font-body text-sm">Checking admin session…</div>;
   if (loggedIn) return <Navigate to="/admin/dashboard" replace />;
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const result = await login(email, password);
-    setLoading(false);
-    if (result.ok) {
-      navigate("/admin/dashboard");
-    } else {
-      setError(result.error);
+    try {
+      const result = await login(email, password);
+      if (result.ok) {
+        navigate("/admin/dashboard");
+      } else {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError(err.message || "Sign-in failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -38,6 +45,11 @@ export default function Login() {
         </div>
 
         <form onSubmit={onSubmit} className="rounded-2xl border border-white/5 bg-ink-850 p-6 space-y-4">
+          {!isSupabaseConfigured && (
+            <div className="text-amber-200 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2.5 text-xs font-body">
+              Supabase is not configured. Add its project URL and anon key to <code>.env.local</code> before signing in.
+            </div>
+          )}
           {error && (
             <div className="flex items-center gap-2 text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded-lg px-3 py-2.5 text-xs font-body">
               <AlertCircle size={14} className="shrink-0" /> {error}
@@ -76,16 +88,13 @@ export default function Login() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !isSupabaseConfigured}
             className="w-full rounded-full bg-moss-500 text-ink-950 font-body font-semibold py-2.5 text-sm hover:bg-moss-400 transition-colors disabled:opacity-60"
           >
             {loading ? "Signing in…" : "Sign In"}
           </button>
         </form>
 
-        <p className="text-mist-400 text-xs font-body text-center mt-5">
-          Demo credentials — {DEMO_CREDENTIALS.email} / {DEMO_CREDENTIALS.password}
-        </p>
       </div>
     </div>
   );

@@ -1,19 +1,38 @@
 import SmartImage from "../../components/SmartImage";
 import { prepareImage } from "../../utils/images";
+import { isSupabaseConfigured, uploadImage } from "../../services/supabase";
 import { useRef, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
 
-// Reads a File into a data URL so it can be stored in localStorage (there's
-// no backend/file storage yet — see src/services/*.js for where this will
-// eventually be swapped for a real upload call).
-export default function ImageUploadBox({ value, onChange, label = "Main Image", hint = "Recommended size 1200x800px", required = false }) {
+export default function ImageUploadBox({ value, onChange, label = "Main Image", hint = "Recommended size 1200x800px", required = false, storageFolder = "content" }) {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleFile = async (file) => {
-    if (!file || !file.type.startsWith("image/")) return;
-    const dataUrl = await prepareImage(file);
-    onChange(dataUrl);
+    if (!file) return;
+    setError("");
+    if (!file.type.startsWith("image/")) {
+      setError("Choose an image file.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Images must be 10 MB or smaller.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const image = isSupabaseConfigured
+        ? await uploadImage(file, storageFolder)
+        : await prepareImage(file);
+      onChange(image);
+    } catch (err) {
+      setError(err.message || "Image upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
   };
 
   return (
@@ -35,7 +54,7 @@ export default function ImageUploadBox({ value, onChange, label = "Main Image", 
           setDragging(false);
           handleFile(e.dataTransfer.files?.[0]);
         }}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => !uploading && inputRef.current?.click()}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
@@ -71,7 +90,7 @@ export default function ImageUploadBox({ value, onChange, label = "Main Image", 
         ) : (
           <>
             <ImagePlus size={22} className="text-mist-400 mb-2" />
-            <p className="text-mist-300 text-sm font-body">Click to upload or drag and drop</p>
+            <p className="text-mist-300 text-sm font-body">{uploading ? "Uploading…" : "Click to upload or drag and drop"}</p>
             {hint && <p className="text-mist-400 text-xs font-body mt-1">({hint})</p>}
           </>
         )}
@@ -83,6 +102,8 @@ export default function ImageUploadBox({ value, onChange, label = "Main Image", 
           onChange={(e) => handleFile(e.target.files?.[0])}
         />
       </div>
+      {uploading && <p className="mt-2 text-mist-400 text-xs font-body" role="status">Uploading image…</p>}
+      {error && <p className="mt-2 text-rose-300 text-xs font-body" role="alert">{error}</p>}
     </div>
   );
 }

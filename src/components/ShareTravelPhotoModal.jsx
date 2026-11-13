@@ -14,6 +14,7 @@ export default function ShareTravelPhotoModal({ open, onClose }) {
   const [form, setForm] = useState(emptyForm);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
   const close = () => {
@@ -25,17 +26,20 @@ export default function ShareTravelPhotoModal({ open, onClose }) {
     }, 200);
   };
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
     if (!form.image) {
       setError("Add a photo before submitting.");
       return;
     }
+    setSubmitting(true);
     try {
-      addSubmission(form);
+      await addSubmission(form);
       setSubmitted(true);
-    } catch {
-      setError("Your photo couldn't be saved. Try a smaller image.");
+    } catch (submitError) {
+      setError(submitError.message || "Your photo couldn't be saved. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -58,7 +62,7 @@ export default function ShareTravelPhotoModal({ open, onClose }) {
               <h3 className="font-display text-2xl text-mist-100">Share your travel photo</h3>
               <p className="text-mist-400 text-sm font-body mt-1">Photos are reviewed before they're published.</p>
             </div>
-            <ImageUploadBox value={form.image} onChange={(v) => { set({ image: v }); setError(""); }} label="Photo" hint="JPG or PNG" required />
+            <ImageUploadBox value={form.image} onChange={(v) => { set({ image: v }); setError(""); }} label="Photo" hint="JPG or PNG" required storageFolder="gallery" />
             <div className="grid sm:grid-cols-2 gap-4">
               <InputField label="Your name" required value={form.visitorName} onChange={(e) => set({ visitorName: e.target.value })} autoComplete="name" />
               <InputField label="Email" type="email" required value={form.email} onChange={(e) => set({ email: e.target.value })} autoComplete="email" />
@@ -70,8 +74,8 @@ export default function ShareTravelPhotoModal({ open, onClose }) {
             <InputField label="Photo title" value={form.title} onChange={(e) => set({ title: e.target.value })} placeholder="e.g. Sunset over the bay" />
             <TextAreaField label="Caption" rows={2} value={form.caption} onChange={(e) => set({ caption: e.target.value })} placeholder="A line about the moment" />
             {error && <p className="text-rose-300 text-sm font-body" role="alert">{error}</p>}
-            <button type="submit" className="w-full py-3 rounded-full bg-moss-500 text-ink-950 font-body font-semibold hover:bg-moss-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-moss-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-850">
-              Submit photo
+            <button type="submit" disabled={submitting} className="w-full py-3 rounded-full bg-moss-500 text-ink-950 font-body font-semibold hover:bg-moss-400 transition-colors disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-moss-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-850">
+              {submitting ? "Submitting…" : "Submit photo"}
             </button>
           </form>
         )}

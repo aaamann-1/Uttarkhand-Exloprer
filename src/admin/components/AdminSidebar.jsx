@@ -8,6 +8,7 @@ import { useSiteSettings } from "../../services/siteSettings";
 import { useNotifications } from "../../services/notifications";
 import { useGallerySubmissions } from "../../services/gallerySubmissions";
 import { useInquiries } from "../../services/inquiries";
+import { reportBackendError } from "../../services/createStore";
 
 const links = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -36,9 +37,13 @@ export default function AdminSidebar({ onNavigate }) {
     "/admin/inquiries": inquiries.filter((i) => i.status === "New").length,
   };
 
-  const doLogout = () => {
-    logout();
-    navigate("/admin/login");
+  const doLogout = async () => {
+    try {
+      await logout();
+      navigate("/admin/login");
+    } catch (error) {
+      reportBackendError(error);
+    }
   };
 
   return (

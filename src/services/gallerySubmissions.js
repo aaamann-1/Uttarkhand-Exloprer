@@ -1,29 +1,12 @@
-import { createStore } from "./createStore";
+import { createStore, submitPublicRecord } from "./createStore";
 import { useStore } from "../hooks/useStore";
-import { pushNotification } from "./notifications";
 
 const store = createStore("uk_gallery_submissions", []);
 
-function makeId() {
-  return `sub_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-}
-
-// data: { image (data URL), place, title, visitorName, email, caption, region }
-export function addSubmission(data) {
-  const entry = {
-    id: makeId(),
-    status: "pending",
-    date: new Date().toISOString(),
-    rejectionReason: null,
-    ...data,
-  };
-  store.setState((list) => [entry, ...list]);
-  pushNotification({
-    type: "gallery",
-    title: "New gallery image submitted",
-    message: `"${data.title || "Untitled"}" from ${data.visitorName || "a visitor"}`,
-    link: "/admin/gallery",
-  });
+// data: { image (public storage URL), place, title, visitorName, email, caption, region }
+export async function addSubmission(data) {
+  const entry = await submitPublicRecord("uk_gallery_submissions", data);
+  store.setState((list) => [entry, ...list], { persistRemote: false });
   return entry;
 }
 

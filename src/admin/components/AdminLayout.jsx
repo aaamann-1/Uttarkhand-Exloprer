@@ -2,9 +2,11 @@ import { Suspense, useState } from "react";
 import { Outlet } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar";
 import AdminTopbar from "./AdminTopbar";
+import { useBackendStatus } from "../../services/createStore";
 
 export default function AdminLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { configured, error } = useBackendStatus();
 
   return (
     <div className="h-screen flex bg-ink-950 font-body overflow-hidden">
@@ -25,6 +27,11 @@ export default function AdminLayout() {
 
       <div className="flex-1 min-w-0 flex flex-col">
         <AdminTopbar onMenuClick={() => setMobileOpen(true)} />
+        {(!configured || error) && (
+          <div className={`px-4 py-2 text-xs font-body ${error ? "bg-rose-950 text-rose-200" : "bg-amber-950 text-amber-200"}`} role="status">
+            {error || "Supabase is not configured. Changes are stored only in this browser and will not sync with visitors."}
+          </div>
+        )}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
           <Suspense fallback={<p className="text-mist-400 font-body text-sm py-10 text-center">Loading…</p>}>
             <Outlet />

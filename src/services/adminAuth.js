@@ -1,83 +1,121 @@
-import { createStore } from "./createStore";
-import { useStore } from "../hooks/useStore";
+import { createStore, refreshRemoteStores } from "./createStore";
+import { isSupabaseConfigured, supabase } from "./supabase";
+import { useEffect, useState } from "react";
 
-// IMPORTANT: this is a frontend-only demo auth layer. There is no server to
-// verify against, so "security" here just means we don't keep the password
-// sitting around in plaintext. SHA-256 via the browser's built-in Web Crypto
-// API is used instead of a real password hashing algorithm (which needs a
-// server and per-user salt to be meaningful) — swap this whole file for real
-// API calls once a backend exists; nothing else in the app should need to
-// change since components only ever call the exported functions below.
-async function sha256(text) {
-  const data = new TextEncoder().encode(text);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-const DEFAULT_EMAIL = "admin@uttarakhandexplorer.in";
-const DEFAULT_PASSWORD = "Admin@123";
-
-const profileStore = createStore("uk_admin_profile", {
-  name: "Admin",
-  email: DEFAULT_EMAIL,
-  avatarDataUrl: null,
-  passwordHash: null, // set lazily on first use, see ensureSeeded()
+const authStore = createStore("uk_admin_auth", { session: null, user: null, ready: !isSupabaseConfigured }, {
+  persist: false,
+  persistLocal: false,
 });
 
-const sessionStore = createStore("uk_admin_session", { loggedIn: false });
+function setAuth(session) {
+  authStore.setState({
+    session,
+    user: session?.user || null,
+    ready: true,
+  });
+}
 
-let seeded = false;
-async function ensureSeeded() {
-  if (seeded) return;
-  seeded = true;
-  if (!profileStore.getState().passwordHash) {
-    const hash = await sha256(DEFAULT_PASSWORD);
-    profileStore.setState((p) => ({ ...p, passwordHash: hash }));
-  }
+if (supabase) {
+  supabase.auth.onAuthStateChange((_event, session) => {
+    setAuth(session);
+    if (session) void refreshRemoteStores();
+  });
+  supabase.auth.getSession().then(async ({ data, error }) => {
+    if (error) throw error;
+    if (!data.session) {
+      setAuth(null);
+      return;
+    }
+    const { data: isAdmin, error: permissionError } = await supabase.rpc("is_admin");
+    if (permissionError) throw permissionError;
+    if (!isAdmin) {
+      await supabase.auth.signOut();
+      setAuth(null);
+      return;
+    }
+    setAuth(data.session);
+    await refreshRemoteStores();
+  }).catch((error) => {
+    authStore.setState({ session: null, user: null, ready: true, error: error.message });
+  });
 }
 
 export async function login(email, password) {
-  await ensureSeeded();
-  const profile = profileStore.getState();
-  const hash = await sha256(password);
-  if (email.trim().toLowerCase() === profile.email.toLowerCase() && hash === profile.passwordHash) {
-    sessionStore.setState({ loggedIn: true });
-    return { ok: true };
+  if (!supabase) {
+    return { ok: false, error: "Supabase is not configured. Add the project URL and anon key to .env.local." };
   }
-  return { ok: false, error: "Incorrect email or password." };
-}
+  const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+  if (error) return { ok: false, error: error.message };
 
-export function logout() {
-  sessionStore.setState({ loggedIn: false });
-}
-
-export function isLoggedIn() {
-  return sessionStore.getState().loggedIn;
-}
-
-export function useAdminSession() {
-  const session = useStore(sessionStore);
-  return { loggedIn: session.loggedIn, login, logout };
-}
-
-export function useAdminProfile() {
-  const profile = useStore(profileStore);
-  return { profile, updateProfile: (patch) => profileStore.setState((p) => ({ ...p, ...patch })) };
-}
-
-export async function changePassword(currentPassword, newPassword) {
-  await ensureSeeded();
-  const profile = profileStore.getState();
-  const currentHash = await sha256(currentPassword);
-  if (currentHash !== profile.passwordHash) {
-    return { ok: false, error: "Current password is incorrect." };
+  const { data: isAdmin, error: permissionError } = await supabase.rpc("is_admin");
+  if (permissionError || !isAdmin) {
+    await supabase.auth.signOut();
+    return { ok: false, error: permissionError?.message || "This account has not been granted admin access." };
   }
-  const newHash = await sha256(newPassword);
-  profileStore.setState((p) => ({ ...p, passwordHash: newHash }));
+  setAuth(data.session);
   return { ok: true };
 }
 
-// Exposed only so the login page can hint at the demo credentials.
-export const DEMO_CREDENTIALS = { email: DEFAULT_EMAIL, password: DEFAULT_PASSWORD };
+export async function logout() {
+  if (!supabase) return;
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
+  setAuth(null);
+}
+
+export function isLoggedIn() {
+  return Boolean(authStore.getState().session);
+}
+
+export function useAdminSession() {
+  const auth = useAuthState();
+  return {
+    loggedIn: Boolean(auth.session),
+    loading: !auth.ready,
+    login,
+    logout,
+  };
+}
+
+function useAuthState() {
+  const [auth, setAuthState] = useState(authStore.getState());
+  useEffect(() => authStore.subscribe(setAuthState), []);
+  return auth;
+}
+
+function toProfile(user) {
+  return {
+    name: user?.user_metadata?.name || user?.email?.split("@")[0] || "Admin",
+    email: user?.email || "",
+    avatarDataUrl: user?.user_metadata?.avatar_url || null,
+  };
+}
+
+export function useAdminProfile() {
+  const { user } = useAuthState();
+  const updateProfile = async ({ name, email, avatarDataUrl }) => {
+    if (!supabase) throw new Error("Supabase is not configured.");
+    const { error: metadataError } = await supabase.auth.updateUser({
+      data: { name, avatar_url: avatarDataUrl },
+    });
+    if (metadataError) throw metadataError;
+    const currentEmail = authStore.getState().user?.email;
+    if (email && email !== currentEmail) {
+      const { error } = await supabase.auth.updateUser({ email });
+      if (error) throw error;
+    }
+  };
+  return { profile: toProfile(user), updateProfile };
+}
+
+export async function changePassword(currentPassword, newPassword) {
+  if (!supabase) return { ok: false, error: "Supabase is not configured." };
+  const email = authStore.getState().user?.email;
+  if (!email) return { ok: false, error: "You are not signed in." };
+
+  const { error: verifyError } = await supabase.auth.signInWithPassword({ email, password: currentPassword });
+  if (verifyError) return { ok: false, error: "Current password is incorrect." };
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}

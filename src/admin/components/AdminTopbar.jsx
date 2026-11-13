@@ -4,6 +4,7 @@ import { Bell, Menu, ChevronDown, UserCircle, LogOut, Check, ExternalLink } from
 import { useNotifications } from "../../services/notifications";
 import { useAdminProfile } from "../../services/adminAuth";
 import { useAdminSession } from "../../services/adminAuth";
+import { reportBackendError } from "../../services/createStore";
 
 import { timeAgo } from "../utils/timeAgo";
 
@@ -26,9 +27,13 @@ export default function AdminTopbar({ onMenuClick }) {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  const doLogout = () => {
-    logout();
-    navigate("/admin/login");
+  const doLogout = async () => {
+    try {
+      await logout();
+      navigate("/admin/login");
+    } catch (error) {
+      reportBackendError(error);
+    }
   };
 
   return (
