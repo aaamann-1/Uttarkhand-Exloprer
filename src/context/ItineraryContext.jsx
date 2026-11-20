@@ -109,6 +109,6 @@ export function ItineraryProvider({ children }) {
 
 export function useItinerary() {
   const ctx = useContext(ItineraryContext);
-  if (!ctx) throw new Error("useItinerary must be used inside ItineraryProvider");
+  if (!ctx) return { days: 0, items: [], ids: [], addDestination: () => {}, removeDestination: () => {}, hasDestination: () => false };
   return ctx;
 }

@@ -1,9 +1,11 @@
+import { Link } from "react-router-dom";
 import PageIntro from "../components/PageIntro";
 import PackageCard from "../components/PackageCard";
 import RegionTabs from "../components/RegionTabs";
 import { useListRegion } from "../services/travelSection";
 import { usePublicPackages } from "../services/content";
 import { contentRegionNames, normalizeRegion } from "../data/regions";
+import { getPackageCategoriesForSection } from "../data/packageCategories";
 
 export default function Packages() {
   const region = useListRegion({ includeCombo: true });
@@ -21,6 +23,20 @@ export default function Packages() {
         description="Each package comes with a day-by-day plan — stays, meals and transport already worked out. Use one as-is, or add its stops to your own trip."
       >
         <RegionTabs includeCombo />
+        {getPackageCategoriesForSection(region).length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-white/[0.08]">
+            <span className="text-xs font-semibold text-mist-400 uppercase tracking-wider mr-1">Packages:</span>
+            {getPackageCategoriesForSection(region).map((cat) => (
+              <Link
+                key={cat.path}
+                to={cat.path}
+                className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full text-xs font-medium border border-white/10 bg-white/[0.04] text-pp-text hover:bg-white/10 hover:border-pp-accent/40 transition-colors"
+              >
+                {cat.label} →
+              </Link>
+            ))}
+          </div>
+        )}
       </PageIntro>
 
       {groups.map(({ name, items }) => (

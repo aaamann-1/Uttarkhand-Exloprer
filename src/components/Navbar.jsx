@@ -8,7 +8,7 @@ import TravelSectionSwitcher from "./nav/TravelSectionSwitcher";
 import { useItinerary } from "../context/ItineraryContext";
 import { useActiveSection } from "../services/travelSection";
 import { useHeaderOverlayActive } from "../hooks/useOverlayHeader";
-import { packageCategories } from "../data/packageCategories";
+import { packageCategories, getPackageCategoriesForSection } from "../data/packageCategories";
 import { mainNavLinks, planTripLink, sectionFromPath } from "../data/navigation";
 
 function isLinkActive(link, pathname) {
@@ -94,7 +94,7 @@ export default function Navbar() {
                   {mainNavLinks.map((link) => (
                     <li key={link.id}>
                       {link.menu === "packages" ? (
-                        <PackagesMenu active={isLinkActive(link, pathname)} label={link.label} pathname={pathname} />
+                        <PackagesMenu active={isLinkActive(link, pathname)} label={link.label} pathname={pathname} activeSection={activeSection} />
                       ) : (
                         <DesktopLink to={hrefFor(link)} active={isLinkActive(link, pathname)}>
                           {link.label}
@@ -144,7 +144,7 @@ export default function Navbar() {
                                 All Packages
                               </MobileLink>
                             </li>
-                            {packageCategories.map((c) => (
+                            {getPackageCategoriesForSection(activeSection.id).map((c) => (
                               <li key={c.path}>
                                 <MobileLink to={c.path} active={pathname === c.path} onClick={closeMobileMenu} small>
                                   {c.label}
@@ -247,7 +247,8 @@ function PlanTripButton({ days, active, fullWidth = false, onClick }) {
 
 // The existing Packages dropdown (All Packages + category pages). Its panel
 // is portalled to <body> so the horizontally-scrollable nav row can't clip it.
-function PackagesMenu({ label, active, pathname }) {
+function PackagesMenu({ label, active, pathname, activeSection }) {
+  const categories = getPackageCategoriesForSection(activeSection?.id);
   const buttonRef = useRef(null);
   const panelRef = useRef(null);
   const [menu, setMenu] = useState(null); // { left, top, path } while open
@@ -312,8 +313,8 @@ function PackagesMenu({ label, active, pathname }) {
             <MenuItem to="/packages" active={pathname === "/packages"} strong>
               All Packages
             </MenuItem>
-            <div className="my-1 border-t border-white/[0.07]" />
-            {packageCategories.map((c) => (
+            {categories.length > 0 && <div className="my-1 border-t border-white/[0.07]" />}
+            {categories.map((c) => (
               <MenuItem key={c.path} to={c.path} active={pathname === c.path}>
                 {c.label}
               </MenuItem>

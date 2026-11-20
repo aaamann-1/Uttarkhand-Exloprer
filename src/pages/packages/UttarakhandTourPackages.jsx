@@ -32,7 +32,7 @@ export default function UttarakhandTourPackages() {
     <div className="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-20 min-h-[55vh]">
       <SectionHeader
         kicker="Packages"
-        title="Uttarakhand Tours"
+        title="Uttarakhand-Tour Packages"
         description="Scenic circuits across Garhwal and Kumaon — from Dehradun to the hills."
       />
 
@@ -41,7 +41,7 @@ export default function UttarakhandTourPackages() {
           <a
             key={item.href}
             href={item.href}
-            className="PASTE-FULL-CLASSNAME-FROM-Packages.jsx-HERE"
+            className="group flex flex-col rounded-2xl overflow-hidden border border-white/5 bg-ink-850 shadow-card hover:border-emerald-400/30 hover:-translate-y-1 transition duration-300"
           >
             <div className="h-40 w-full overflow-hidden bg-ink-800">
               <img

@@ -15,8 +15,14 @@ import Destinations from "./pages/Destinations";
 import DestinationDetail from "./pages/DestinationDetail";
 import Packages from "./pages/Packages";
 import PackageDetail from "./pages/PackageDetail";
+import HoneymoonPackages from "./pages/packages/HoneymoonPackages";
 import SpiritualPackages from "./pages/packages/SpiritualPackages";
 import LocalTourPackages from "./pages/packages/LocalTourPackages";
+import UttarakhandTourPackages from "./pages/packages/UttarakhandTourPackages";
+import GoaHoneymoonPackages from "./pages/packages/GoaHoneymoonPackages";
+import GoaLocalTourPackages from "./pages/packages/GoaLocalTourPackages";
+import GoaHeritagePackages from "./pages/packages/GoaHeritagePackages";
+import GoaTourPackages from "./pages/packages/GoaTourPackages";
 import MostPopularPackages from "./pages/packages/MostPopularPackages";
 import LuxuryPackages from "./pages/packages/LuxuryPackages";
 import BudgetFriendlyPackages from "./pages/packages/BudgetFriendlyPackages";
@@ -97,8 +103,14 @@ export default function App() {
           <Route path="/destinations" element={<Destinations />} />
           <Route path="/destinations/:id" element={<DestinationDetail />} />
           <Route path="/packages" element={<Packages />} />
+          <Route path="/packages/honeymoon" element={<HoneymoonPackages />} />
           <Route path="/packages/spiritual" element={<SpiritualPackages />} />
           <Route path="/packages/local-tours" element={<LocalTourPackages />} />
+          <Route path="/packages/uttarakhand-tours" element={<UttarakhandTourPackages />} />
+          <Route path="/packages/goa-honeymoon" element={<GoaHoneymoonPackages />} />
+          <Route path="/packages/goa-local-tours" element={<GoaLocalTourPackages />} />
+          <Route path="/packages/goa-heritage" element={<GoaHeritagePackages />} />
+          <Route path="/packages/goa-tours" element={<GoaTourPackages />} />
           <Route path="/packages/most-popular" element={<MostPopularPackages />} />
           <Route path="/packages/luxury" element={<LuxuryPackages />} />
           <Route path="/packages/budget-friendly" element={<BudgetFriendlyPackages />} />
